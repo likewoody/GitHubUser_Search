@@ -1,8 +1,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/macos,windows,swift,python,flask,firebase,database
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,windows,swift,python,flask,firebase,database
 
+
 *.DS_Store
 *.plist
+
 
 ### Database ###
 *.accdb
