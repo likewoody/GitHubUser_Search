@@ -6,13 +6,30 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C8D50CF82D40CDD8003F973F /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = C8D50CF72D40CDD8003F973F /* Alamofire */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		C8D50CCA2D40C92E003F973F /* GitHubUser_Search.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GitHubUser_Search.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C8D50D002D40D091003F973F /* Exceptions for "GitHubUser_Search" folder in "GitHubUser_Search" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"GitHubUser-Search-Info.plist",
+			);
+			target = C8D50CC92D40C92E003F973F /* GitHubUser_Search */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C8D50CCC2D40C92E003F973F /* GitHubUser_Search */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C8D50D002D40D091003F973F /* Exceptions for "GitHubUser_Search" folder in "GitHubUser_Search" target */,
+			);
 			path = GitHubUser_Search;
 			sourceTree = "<group>";
 		};
@@ -23,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C8D50CF82D40CDD8003F973F /* Alamofire in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +83,7 @@
 			);
 			name = GitHubUser_Search;
 			packageProductDependencies = (
+				C8D50CF72D40CDD8003F973F /* Alamofire */,
 			);
 			productName = GitHubUser_Search;
 			productReference = C8D50CCA2D40C92E003F973F /* GitHubUser_Search.app */;
@@ -94,6 +113,9 @@
 			);
 			mainGroup = C8D50CC12D40C92E003F973F;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C8D50CF62D40CDD8003F973F /* XCRemoteSwiftPackageReference "Alamofire" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C8D50CCB2D40C92E003F973F /* Products */;
 			projectDirPath = "";
@@ -254,6 +276,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"GitHubUser_Search/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "GitHubUser-Search-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -282,6 +305,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"GitHubUser_Search/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "GitHubUser-Search-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -322,6 +346,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C8D50CF62D40CDD8003F973F /* XCRemoteSwiftPackageReference "Alamofire" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.10.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C8D50CF72D40CDD8003F973F /* Alamofire */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C8D50CF62D40CDD8003F973F /* XCRemoteSwiftPackageReference "Alamofire" */;
+			productName = Alamofire;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C8D50CC22D40C92E003F973F /* Project object */;
 }

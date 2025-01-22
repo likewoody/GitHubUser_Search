@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import Combine
 
 struct UserListView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -14,63 +15,96 @@ struct UserListView: View {
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \FavoriteUser.login, ascending: true)],
         animation: .default)
-    private var uesrList: FetchedResults<FavoriteUser>
+    private var coreDataFavoriteUser: FetchedResults<FavoriteUser>
+    @State private var userList: [UserRepositroyModel] = []
+    @State private var cancellable = Set<AnyCancellable>()
 
     var body: some View {
         NavigationView {
             List {
-                ForEach(uesrList) { user in
-                    NavigationLink {
-                        Text("Item at \(user.id)")
-                    } label: {
-                        Text(user.login!)
+                Text("test")
+//                ForEach(userList, id: \.repository.owner.id) { user in
+//                    user.repository.owner.id
+//                }
+            }
+//            List {
+//                ForEach(coreDataFavoriteUser) { user in
+//                    NavigationLink {
+//                        Text("Item at \(user.id)")
+//                    } label: {
+//                        Text(user.login!)
+//                    }
+//                }
+//                .onDelete(perform: deleteItems)
+//            }
+//            .toolbar {
+//                ToolbarItem(placement: .navigationBarTrailing) {
+//                    EditButton()
+//                }
+//                ToolbarItem {
+//                    Button(action: addItem) {
+//                        Label("Add Item", systemImage: "plus")
+//                    }
+//                }
+//            }
+            
+        }
+        .onAppear {
+            let session = UserSession()
+            let networkManager = UserNetworkManager(session: session)
+            
+            let urlString = "https://api.github.com/search/code?q=\("")&page=1"
+            Task {
+                let publisherTest: AnyPublisher<UserItemsModel, NetworkError> = await networkManager.fetchUser(urlString: urlString, method: .get, parameters: nil)
+                
+                
+                publisherTest
+                    .receive(on: DispatchQueue.main)
+                    .sink { completion in
+                        switch completion {
+                        case .finished : break
+                        case .failure(let error):
+                            print("test error \(error)")
+                        }
+                    } receiveValue: { datas in
+                        userList = datas.items
                     }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = FavoriteUser(context: viewContext)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+                    .store(in: &cancellable)
+                
+                print(userList)
             }
         }
     }
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-//            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
+//    private func addItem() {
+//        withAnimation {
+//            let newItem = FavoriteUser(context: viewContext)
+//
+//            do {
+//                try viewContext.save()
+//            } catch {
+//                // Replace this implementation with code to handle the error appropriately.
+//                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+//                let nsError = error as NSError
+//                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+//            }
+//        }
+//    }
+//
+//    private func deleteItems(offsets: IndexSet) {
+//        withAnimation {
+////            offsets.map { items[$0] }.forEach(viewContext.delete)
+//
+//            do {
+//                try viewContext.save()
+//            } catch {
+//                // Replace this implementation with code to handle the error appropriately.
+//                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+//                let nsError = error as NSError
+//                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+//            }
+//        }
+//    }
 }
 
 #Preview {
