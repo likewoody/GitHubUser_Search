@@ -1,4 +1,4 @@
-# GitHubUser_Combine
+# GitHubUser_Search
 iOS Github Users List
 
 ### Pattern
