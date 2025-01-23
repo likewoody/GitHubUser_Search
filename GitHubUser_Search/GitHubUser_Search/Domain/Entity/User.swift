@@ -11,15 +11,15 @@ public struct UserItemsModel: Codable {
     let items: [UserRepositoryModel]
 }
 
-public struct UserRepositoryModel: Codable {
+public struct UserRepositoryModel: Codable, Hashable {
     let repository: UserOwnerModel
 }
 
-public struct UserOwnerModel: Codable {
+public struct UserOwnerModel: Codable, Hashable {
     let owner: UserModel
 }
 
-public struct UserModel: Codable {
+public struct UserModel: Codable, Hashable {
     let id: Int
     let login, imageURL: String
     

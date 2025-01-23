@@ -18,6 +18,11 @@ struct UserListView: View {
 //    private var coreDataFavoriteUser: FetchedResults<FavoriteUser>
 //    @State private var userList: [UserRepositoryModel] = []
     @State private var cancellable = Set<AnyCancellable>()
+    private let viewModel: UserViewModelProtocol
+    
+    init(viewModel: UserViewModelProtocol) {
+        self.viewModel = viewModel
+    }
 
     var body: some View {
         NavigationView {
@@ -48,31 +53,31 @@ struct UserListView: View {
 //                }
 //            }
         }
-        .onAppear(perform: {
-            print("onAppear start")
-            let session = UserSession()
-            let networkManager = UserNetworkManager(session: session)
-//
-            let urlString = "https://api.github.com/search/code?q=dd&page=1"
-            Task {
-                print("task start")
-                await networkManager.fetchUser(urlString: urlString, method: .get, parameters: nil)
-                    .receive(on: DispatchQueue.main)
-                    .sink { completion in
-                        switch completion {
-                        case .finished: break
-                        case .failure(let error):
-                            print(error.description)
-                        }
-                    } receiveValue: { (user: UserItemsModel) in
-                        print(user.items)
-                    }
-                    .store(in: &cancellable)
-                
-                print("task finish")
-            }
-            print("onAppear finish")
-        })
+//        .onAppear(perform: {
+//            print("onAppear start")
+//            let session = UserSession()
+//            let networkManager = UserNetworkManager(session: session)
+////
+//            let urlString = "https://api.github.com/search/code?q=dd&page=1"
+//            Task {
+//                print("task start")
+//                await networkManager.fetchUser(urlString: urlString, method: .get, parameters: nil)
+//                    .receive(on: DispatchQueue.main)
+//                    .sink { completion in
+//                        switch completion {
+//                        case .finished: break
+//                        case .failure(let error):
+//                            print(error.description)
+//                        }
+//                    } receiveValue: { (user: UserItemsModel) in
+//                        print(user.items)
+//                    }
+//                    .store(in: &cancellable)
+//                
+//                print("task finish")
+//            }
+//            print("onAppear finish")
+//        })
     }
 
 //    private func addItem() {
@@ -107,6 +112,15 @@ struct UserListView: View {
 }
 
 #Preview {
-    UserListView()
+    let persistenceController = PersistenceController.shared
+    
+    let viewContext = persistenceController.container.viewContext
+    let userCoreData = UserCoreData(viewContext: viewContext)
+    let network = UserNetwork(networkMangaer: UserNetworkManager(session: UserSession()))
+    let userRepository = UserRepository(userCoreData: userCoreData, network: network)
+    let userUsecase = UserUsecase(userRepository: userRepository)
+    let userVM = UserViewModel(usecase: userUsecase)
+    
+    UserListView(viewModel: userVM)
 //        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
