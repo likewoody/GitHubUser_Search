@@ -10,13 +10,13 @@ import CoreData
 import Combine
 
 struct UserListView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \FavoriteUser.login, ascending: true)],
-        animation: .default)
-    private var coreDataFavoriteUser: FetchedResults<FavoriteUser>
-    @State private var userList: [UserRepositroyModel] = []
+//    @Environment(\.managedObjectContext) private var viewContext
+//
+//    @FetchRequest(
+//        sortDescriptors: [NSSortDescriptor(keyPath: \FavoriteUser.login, ascending: true)],
+//        animation: .default)
+//    private var coreDataFavoriteUser: FetchedResults<FavoriteUser>
+//    @State private var userList: [UserRepositoryModel] = []
     @State private var cancellable = Set<AnyCancellable>()
 
     var body: some View {
@@ -47,33 +47,32 @@ struct UserListView: View {
 //                    }
 //                }
 //            }
-            
         }
-        .onAppear {
+        .onAppear(perform: {
+            print("onAppear start")
             let session = UserSession()
             let networkManager = UserNetworkManager(session: session)
-            
-            let urlString = "https://api.github.com/search/code?q=\("")&page=1"
+//
+            let urlString = "https://api.github.com/search/code?q=dd&page=1"
             Task {
-                let publisherTest: AnyPublisher<UserItemsModel, NetworkError> = await networkManager.fetchUser(urlString: urlString, method: .get, parameters: nil)
-                
-                
-                publisherTest
+                print("task start")
+                await networkManager.fetchUser(urlString: urlString, method: .get, parameters: nil)
                     .receive(on: DispatchQueue.main)
                     .sink { completion in
                         switch completion {
-                        case .finished : break
+                        case .finished: break
                         case .failure(let error):
-                            print("test error \(error)")
+                            print(error.description)
                         }
-                    } receiveValue: { datas in
-                        userList = datas.items
+                    } receiveValue: { (user: UserItemsModel) in
+                        print(user.items)
                     }
                     .store(in: &cancellable)
                 
-                print(userList)
+                print("task finish")
             }
-        }
+            print("onAppear finish")
+        })
     }
 
 //    private func addItem() {
@@ -108,5 +107,6 @@ struct UserListView: View {
 }
 
 #Preview {
-    UserListView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    UserListView()
+//        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }

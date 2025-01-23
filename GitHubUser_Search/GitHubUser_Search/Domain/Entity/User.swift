@@ -8,10 +8,10 @@
 import Foundation
 
 public struct UserItemsModel: Codable {
-    let items: [UserRepositroyModel]
+    let items: [UserRepositoryModel]
 }
 
-public struct UserRepositroyModel: Codable {
+public struct UserRepositoryModel: Codable {
     let repository: UserOwnerModel
 }
 
