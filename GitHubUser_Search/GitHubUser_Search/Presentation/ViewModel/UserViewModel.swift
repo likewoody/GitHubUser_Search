@@ -19,16 +19,22 @@ public class UserViewModel: ObservableObject {
     private let usecase: UserUsecaseProtocol
     
 //    @Published public var userList = CurrentValueSubject<[UserRepositoryModel], any Error>([])
-    private let favoriteUserList = PassthroughSubject<[UserRepositoryModel], any Error>()
+    
     private let allFavoriteUserList = PassthroughSubject<[UserRepositoryModel], any Error>()
     private var cancellable = Set<AnyCancellable>()
     
     @Published public var userList: [UserRepositoryModel] = []
+    @Published public var favoriteUserList: UserRepositoryModel?
 //    {
 //        willSet {
 //            print("userList will set : \(newValue)")
 //        }
 //    }
+    @Published public var paging: Int = 1 {
+        willSet {
+            queryPaging()
+        }
+    }
     @Published public var searchText: String = ""
     {
         willSet {
@@ -71,6 +77,32 @@ public class UserViewModel: ObservableObject {
         
         print("finished userList :\n\(userList)")
     }
+    
+    private func queryPaging() {
+        $paging
+            .sink { [weak self] page in
+                guard let self = self else { return }
+                self.fetchUser(query: self.searchText, page: page)
+            }
+            .store(in: &cancellable)
+    }
+    
+    public func saveFavoriteUser(user: UserRepositoryModel) {
+        let result = usecase.saveFavoriteUser(user: user)
+        result
+            .sink { completion in
+                switch completion {
+                case .finished: break
+                case .failure(let error):
+                    print(error.description)
+                }
+            } receiveValue: { [weak self] boolResult in
+                if boolResult {
+                    self?.handleSearchText()
+                }
+            }
+            .store(in: &cancellable)
+    }
 //        searchText.publisher
 ////            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
 //            .sink { query in
@@ -109,6 +141,7 @@ public class UserViewModel: ObservableObject {
     }
     
     private func fetchUser(query: String, page: Int) {
+        userList = []
         guard let queryAllowed = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return }
         
         Task{
@@ -143,12 +176,12 @@ public class UserViewModel: ObservableObject {
                 }
             }, receiveValue: { [weak self] users in
                 if query.isEmpty {
-                    self?.favoriteUserList.send(users)
+//                    self?.favoriteUserList.send(users)
                 } else {
-                    let filteredUserList = users.filter { $0.repository.owner.login.contains(query.lowercased()) }
-                    self?.favoriteUserList.send(filteredUserList)
+//                    let filteredUserList = users.filter { $0.repository.owner.login.contains(query.lowercased()) }
+//                    self?.favoriteUserList.send(filteredUserList)
                 }
-                self?.allFavoriteUserList.send(users)
+//                self?.allFavoriteUserList.send(users)
             })
             .store(in: &cancellable)
         

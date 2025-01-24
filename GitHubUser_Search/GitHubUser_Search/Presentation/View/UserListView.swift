@@ -11,7 +11,7 @@ import Combine
 import SDWebImageSwiftUI
 
 // MARK: View
-struct UserListView: View {    
+struct UserListView: View {
     let pickerButtonType: [PickerButtonType] = [.all, .favorite]
     @State private var cancellable = Set<AnyCancellable>()
     @State private var pickerSelecter: String = "all"
@@ -65,29 +65,45 @@ extension UserListView {
 extension UserListView {
     var userView: some View {
         ScrollView {
-            ForEach(viewModel.userList, id: \.repository.owner.id) { user in
-                HStack {
-                    if let url = URL(string: user.repository.owner.imageURL) {
-                        WebImage(url: url)
-                            .resizable()
-                            .frame(width: 120, height: 120)
-                            .clipShape(.rect(cornerRadius: 8))
-                    } else {
-                        Image(systemName: "person.circle")
-                            .frame(width: 120, height: 120)
-                            .clipShape(.rect(cornerRadius: 8))
-                    }
-                    Spacer()
+            LazyVStack {
+                ForEach(viewModel.userList, id: \.repository.owner.id) { user in
+                    HStack {
+                        if let url = URL(string: user.repository.owner.imageURL) {
+                            WebImage(url: url)
+                                .resizable()
+                                .frame(width: 120, height: 120)
+                                .clipShape(.rect(cornerRadius: 8))
+                        } else {
+                            Image(systemName: "person.circle")
+                                .frame(width: 120, height: 120)
+                                .clipShape(.rect(cornerRadius: 8))
+                        }
+                        Spacer()
 
-                    Text(user.repository.owner.login)
-                        .font(.title3)
-                    
-                    Spacer()
-                    Image(systemName: "heart")
-                        .font(.headline)
-                        .foregroundStyle(.red)
+                        Text(user.repository.owner.login)
+                            .font(.title3)
+                        
+                        Spacer()
+                        Button {
+                            viewModel.saveFavoriteUser(user: user)
+                        } label: {
+                            Image(systemName: "heart")
+                                .font(.headline)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                    .onAppear {
+                        guard let lastUser = viewModel.userList.last else { return }
+//                        let targetIndex = lastIndex - 3
+                        // targetIndex가 유효한지 확인
+//                        guard targetIndex >= 0, viewModel.userList.indices.contains(targetIndex) else { return }
+                        if user == lastUser {
+                            viewModel.paging += 1
+                            print("paging += 1")
+                        }
+                    }
+                    .padding()
                 }
-                .padding()
             }
         }
     }

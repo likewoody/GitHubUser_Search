@@ -41,7 +41,7 @@ public struct UserCoreData: UserCoreDataProtocol {
         }
     }
     public func saveFavoriteUser(user: UserRepositoryModel) -> AnyPublisher<Bool, CoreDataError> {
-        guard let entity = NSEntityDescription.entity(forEntityName: "favoriteUser", in: viewContext) else { return Fail(error: CoreDataError.notFoundEntity("FavoriteUser Not Found Error")).eraseToAnyPublisher()}
+        guard let entity = NSEntityDescription.entity(forEntityName: "FavoriteUser", in: viewContext) else { return Fail(error: CoreDataError.notFoundEntity("FavoriteUser Not Found Error")).eraseToAnyPublisher()}
         
         let userObject = NSManagedObject(entity: entity, insertInto: viewContext)
         userObject.setValue(user.repository.owner.id, forKey: "id")
@@ -49,6 +49,7 @@ public struct UserCoreData: UserCoreDataProtocol {
         userObject.setValue(user.repository.owner.imageURL, forKey: "imageURL")
         do {
             try viewContext.save()
+            print("succesfully user save! : \n\(user)")
             return Just(true)
                 .setFailureType(to: CoreDataError.self)
                 .eraseToAnyPublisher()
