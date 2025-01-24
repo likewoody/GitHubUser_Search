@@ -15,7 +15,7 @@ struct GitHubUser_SearchApp: App {
     var network: UserNetworkProtocol
     var userRepository: UserRepositoryProtocol
     var userUsecase: UserUsecaseProtocol
-    var userVM: UserViewModelProtocol
+    var userVM: UserViewModel
     
     init() {
         let viewContext = persistenceController.container.viewContext

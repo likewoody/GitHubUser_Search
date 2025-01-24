@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C87382442D43398F00AB6A27 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = C87382432D43398F00AB6A27 /* SDWebImageSwiftUI */; };
 		C8D50CF82D40CDD8003F973F /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = C8D50CF72D40CDD8003F973F /* Alamofire */; };
 /* End PBXBuildFile section */
 
@@ -71,6 +72,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C87382442D43398F00AB6A27 /* SDWebImageSwiftUI in Frameworks */,
 				C8D50CF82D40CDD8003F973F /* Alamofire in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -138,6 +140,7 @@
 			name = GitHubUser_Search;
 			packageProductDependencies = (
 				C8D50CF72D40CDD8003F973F /* Alamofire */,
+				C87382432D43398F00AB6A27 /* SDWebImageSwiftUI */,
 			);
 			productName = GitHubUser_Search;
 			productReference = C8D50CCA2D40C92E003F973F /* GitHubUser_Search.app */;
@@ -173,6 +176,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				C8D50CF62D40CDD8003F973F /* XCRemoteSwiftPackageReference "Alamofire" */,
+				C87382422D43398F00AB6A27 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C8D50CCB2D40C92E003F973F /* Products */;
@@ -472,6 +476,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		C87382422D43398F00AB6A27 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.3;
+			};
+		};
 		C8D50CF62D40CDD8003F973F /* XCRemoteSwiftPackageReference "Alamofire" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
@@ -483,6 +495,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		C87382432D43398F00AB6A27 /* SDWebImageSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C87382422D43398F00AB6A27 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
+			productName = SDWebImageSwiftUI;
+		};
 		C8D50CF72D40CDD8003F973F /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C8D50CF62D40CDD8003F973F /* XCRemoteSwiftPackageReference "Alamofire" */;

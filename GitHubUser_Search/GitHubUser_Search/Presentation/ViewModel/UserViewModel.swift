@@ -8,60 +8,96 @@
 import Foundation
 import Combine
 
-public protocol UserViewModelProtocol {
-    func transform(input: UserViewModel.Input) -> UserViewModel.Output
-}
+//public protocol UserViewModelProtocol: ObservableObject {
+//    var searchText: String { get set }
+////    func handleEvent()
+////    func transform(input: UserViewModel.Input) -> UserViewModel.Output
+//}
 
-public class UserViewModel: UserViewModelProtocol {
-    
+public class UserViewModel: ObservableObject {
+
     private let usecase: UserUsecaseProtocol
-    private let userList = CurrentValueSubject<[UserRepositoryModel], any Error>([])
+    
+//    @Published public var userList = CurrentValueSubject<[UserRepositoryModel], any Error>([])
     private let favoriteUserList = PassthroughSubject<[UserRepositoryModel], any Error>()
     private let allFavoriteUserList = PassthroughSubject<[UserRepositoryModel], any Error>()
     private var cancellable = Set<AnyCancellable>()
     
+    @Published public var userList: [UserRepositoryModel] = []
+//    {
+//        willSet {
+//            print("userList will set : \(newValue)")
+//        }
+//    }
+    @Published public var searchText: String = ""
+    {
+        willSet {
+            Task{
+                try await Task.sleep(nanoseconds: 30000)
+                handleSearchText()
+            }
+        }
+    }
     
     init(usecase: UserUsecaseProtocol) {
         self.usecase = usecase
     }
     
-    public struct Input {
-        let tabButtonType: AnyPublisher<TabButtonType, any Error>
-        let query: AnyPublisher<String, any Error>
-        let paging: AnyPublisher<Int, any Error>
-        let saveFavorite: AnyPublisher<UserRepositoryModel, any Error>
-        let deleteFavorite: AnyPublisher<Int, any Error>
-    }
-    
-    public struct Output {
+//    public struct Input {
+//////        let tabButtonType: AnyPublisher<TabButtonType, any Error>
+//        let query: AnyPublisher<String, any Error>
+//////        let paging: AnyPublisher<Int, any Error>
+//////        let saveFavorite: AnyPublisher<UserRepositoryModel, any Error>
+//////        let deleteFavorite: AnyPublisher<Int, any Error>
+//    }
+//    public struct Output {
 //        let userList: AnyPublisher<[UserRepositoryModel], any Error>
 //        let error: AnyPublisher<String, any Error>
-
-    }
+//    }
     
-    public func transform(input: Input) -> Output {
-        input.query
-            .subscribe(on: DispatchQueue.global(qos: .background))
-            .sink(receiveCompletion: { completion in
-                switch completion {
-                case .finished: break
-                case .failure(let error):
-                    print(error.localizedDescription)
+    private func handleSearchText() {
+        $searchText
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .removeDuplicates()
+            .sink { [weak self] query in
+                guard ((self?.validQuery(query: query)) != nil) else {
+                    self?.getFavoriteUserList(query: "")
+                    return
                 }
-            }, receiveValue: {  query in
-//                [weak self]
-                print("receiveValeu query check \(query)")
-//                guard ((self?.validQuery(query: query)) != nil) else {
-//                    self?.getFavoriteUserList(query: "")
-//                    return
-//                }
-//                self?.getFavoriteUserList(query: query)
-//                self?.fetchUser(query: query, page: 1)
-            })
+                self?.getFavoriteUserList(query: query)
+                self?.fetchUser(query: query, page: 1)
+            }
             .store(in: &cancellable)
-            
-        return Output()
+        
+        print("finished userList :\n\(userList)")
     }
+//        searchText.publisher
+////            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+//            .sink { query in
+//                print(query)
+//            }
+//            .store(in: &cancellable)
+//        input.query
+//            .subscribe(on: DispatchQueue.global(qos: .background))
+//            .sink(receiveCompletion: { completion in
+//                switch completion {
+//                case .finished: break
+//                case .failure(let error):
+//                    print(error.localizedDescription)
+//                }
+//            }, receiveValue: {  query in
+////                [weak self]
+//                print("receiveValeu query check \(query)")
+////                guard ((self?.validQuery(query: query)) != nil) else {
+////                    self?.getFavoriteUserList(query: "")
+////                    return
+////                }
+////                self?.getFavoriteUserList(query: query)
+////                self?.fetchUser(query: query, page: 1)
+//            })
+//            .store(in: &cancellable)
+            
+//        return Output()
     
     private func validQuery(query: String) -> Bool {
         // 유효성 검사도 할 수 있고 등등
@@ -76,7 +112,7 @@ public class UserViewModel: UserViewModelProtocol {
         guard let queryAllowed = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return }
         
         Task{
-            await usecase.fetchUserList(query: query, page: page)
+            await usecase.fetchUserList(query: queryAllowed, page: page)
                 .receive(on: DispatchQueue.main)
                 .sink { completion in
                     switch completion {
@@ -85,10 +121,11 @@ public class UserViewModel: UserViewModelProtocol {
                         print(error.description)
                     }
                 } receiveValue: { [weak self] users in
+                    print("query check : \(queryAllowed)\n user check : \(users)")
                     if page == 1 {
-                        self?.userList.send(users.items)
+                        self?.userList = users.items
                     } else {
-                        self?.userList.send((self?.userList.value)! + users.items)
+                        self?.userList += users.items
                     }
                 }
                 .store(in: &cancellable)
@@ -118,6 +155,6 @@ public class UserViewModel: UserViewModelProtocol {
     }
 }
 
-public enum TabButtonType: String {
+public enum PickerButtonType: String {
     case all, favorite
 }
