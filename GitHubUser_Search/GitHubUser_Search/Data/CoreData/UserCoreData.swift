@@ -49,7 +49,6 @@ public struct UserCoreData: UserCoreDataProtocol {
         userObject.setValue(user.repository.owner.imageURL, forKey: "imageURL")
         do {
             try viewContext.save()
-            print("succesfully user save! : \n\(user)")
             return Just(true)
                 .setFailureType(to: CoreDataError.self)
                 .eraseToAnyPublisher()

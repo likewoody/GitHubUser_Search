@@ -42,13 +42,11 @@ public struct UserUsecase: UserUsecaseProtocol {
     
     func checkFavoriteStatus(userList: [UserRepositoryModel], favortieUserList: [UserRepositoryModel]) -> [(user: UserRepositoryModel, isFavorite: Bool)] {
         let setFavoriteUserList = Set(favortieUserList)
-        
         let returnValue = userList.map { user in
             if setFavoriteUserList.contains(user) {
                 return (user, true)
             } else { return (user, false) }
         }
-        
         return returnValue
     }
     

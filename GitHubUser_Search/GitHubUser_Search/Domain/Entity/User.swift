@@ -22,7 +22,7 @@ public struct UserOwnerModel: Codable, Hashable {
 public struct UserModel: Codable, Hashable {
     let id: Int
     let login, imageURL: String
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case login

@@ -8,28 +8,26 @@
 import Foundation
 import Combine
 
-//public protocol UserViewModelProtocol: ObservableObject {
-//    var searchText: String { get set }
-////    func handleEvent()
-////    func transform(input: UserViewModel.Input) -> UserViewModel.Output
-//}
-
+// MARK: ViewModel
 public class UserViewModel: ObservableObject {
-
     private let usecase: UserUsecaseProtocol
-    
-//    @Published public var userList = CurrentValueSubject<[UserRepositoryModel], any Error>([])
-    
-    private let allFavoriteUserList = PassthroughSubject<[UserRepositoryModel], any Error>()
     private var cancellable = Set<AnyCancellable>()
+    private var allFavoriteUserList: [UserRepositoryModel] = []
+    private var favoriteUserList: [UserRepositoryModel] = []
+    private var pickerTabButtonType: PickerButtonType = .all
     
-    @Published public var userList: [UserRepositoryModel] = []
-    @Published public var favoriteUserList: UserRepositoryModel?
-//    {
-//        willSet {
-//            print("userList will set : \(newValue)")
-//        }
-//    }
+    @Published public var headers: [String] = []
+    @Published public var userList: [(user: UserRepositoryModel, isFavorite: Bool)] = []
+    @Published public var pickerSelecter: String = "All" {
+        willSet {
+            if newValue == "All" {
+                pickerTabButtonType = .all
+            } else {
+                pickerTabButtonType = .favorite
+            }
+            getFavoriteUserList(query: searchText)
+        }
+    }
     @Published public var paging: Int = 1 {
         willSet {
             queryPaging()
@@ -49,33 +47,21 @@ public class UserViewModel: ObservableObject {
         self.usecase = usecase
     }
     
-//    public struct Input {
-//////        let tabButtonType: AnyPublisher<TabButtonType, any Error>
-//        let query: AnyPublisher<String, any Error>
-//////        let paging: AnyPublisher<Int, any Error>
-//////        let saveFavorite: AnyPublisher<UserRepositoryModel, any Error>
-//////        let deleteFavorite: AnyPublisher<Int, any Error>
-//    }
-//    public struct Output {
-//        let userList: AnyPublisher<[UserRepositoryModel], any Error>
-//        let error: AnyPublisher<String, any Error>
-//    }
-    
+    // MARK: Function SearchText & Query
     private func handleSearchText() {
         $searchText
             .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
             .removeDuplicates()
             .sink { [weak self] query in
-                guard ((self?.validQuery(query: query)) != nil) else {
-                    self?.getFavoriteUserList(query: "")
+                guard let self = self,
+                      self.validQuery(query: query) else {
+                      self!.fetchUser(query: "", page: 1)
                     return
                 }
-                self?.getFavoriteUserList(query: query)
-                self?.fetchUser(query: query, page: 1)
+                self.fetchUser(query: query, page: 1)
+                
             }
             .store(in: &cancellable)
-        
-        print("finished userList :\n\(userList)")
     }
     
     private func queryPaging() {
@@ -87,63 +73,18 @@ public class UserViewModel: ObservableObject {
             .store(in: &cancellable)
     }
     
-    public func saveFavoriteUser(user: UserRepositoryModel) {
-        let result = usecase.saveFavoriteUser(user: user)
-        result
-            .sink { completion in
-                switch completion {
-                case .finished: break
-                case .failure(let error):
-                    print(error.description)
-                }
-            } receiveValue: { [weak self] boolResult in
-                if boolResult {
-                    self?.handleSearchText()
-                }
-            }
-            .store(in: &cancellable)
-    }
-//        searchText.publisher
-////            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
-//            .sink { query in
-//                print(query)
-//            }
-//            .store(in: &cancellable)
-//        input.query
-//            .subscribe(on: DispatchQueue.global(qos: .background))
-//            .sink(receiveCompletion: { completion in
-//                switch completion {
-//                case .finished: break
-//                case .failure(let error):
-//                    print(error.localizedDescription)
-//                }
-//            }, receiveValue: {  query in
-////                [weak self]
-//                print("receiveValeu query check \(query)")
-////                guard ((self?.validQuery(query: query)) != nil) else {
-////                    self?.getFavoriteUserList(query: "")
-////                    return
-////                }
-////                self?.getFavoriteUserList(query: query)
-////                self?.fetchUser(query: query, page: 1)
-//            })
-//            .store(in: &cancellable)
-            
-//        return Output()
-    
     private func validQuery(query: String) -> Bool {
         // 유효성 검사도 할 수 있고 등등
         if query.isEmpty {
             return false
         } else {
+            userList = []
             return true
         }
     }
     
     private func fetchUser(query: String, page: Int) {
-        userList = []
         guard let queryAllowed = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return }
-        
         Task{
             await usecase.fetchUserList(query: queryAllowed, page: page)
                 .receive(on: DispatchQueue.main)
@@ -154,15 +95,55 @@ public class UserViewModel: ObservableObject {
                         print(error.description)
                     }
                 } receiveValue: { [weak self] users in
-                    print("query check : \(queryAllowed)\n user check : \(users)")
                     if page == 1 {
-                        self?.userList = users.items
+                        self?.userList = []
+                        self?.userList = users.items.map { user in
+                            (user: user, isFavorite: false)
+                        }
                     } else {
-                        self?.userList += users.items
+                        self?.userList += users.items.map { user in
+                            (user: user, isFavorite: false)
+                        }
                     }
+                    self?.getFavoriteUserList(query: query)
                 }
                 .store(in: &cancellable)
         }
+    }
+    
+    // MARK: Function Save & Delete
+    public func saveFavoriteUser(user: UserRepositoryModel) {
+        let result = usecase.saveFavoriteUser(user: user)
+        result
+            .sink { completion in
+                switch completion {
+                case .finished: break
+                case .failure(let error):
+                    print(error.description)
+                }
+            } receiveValue: { [weak self] saveResult in
+                if saveResult {
+                    self?.getFavoriteUserList(query: self?.searchText ?? "")
+                }
+            }
+            .store(in: &cancellable)
+    }
+    
+    public func deleteFavoriteUser(id: Int) {
+        let result = usecase.deleteFavoriteUser(id: id)
+        result
+            .sink { completion in
+                switch completion {
+                case .finished: break
+                case .failure(let error):
+                    print(error.description)
+                }
+            } receiveValue: { [weak self] deleteResult in
+                if deleteResult {
+                    self?.getFavoriteUserList(query: self?.searchText ?? "")
+                }
+            }
+            .store(in: &cancellable)
     }
     
     private func getFavoriteUserList(query: String) {
@@ -175,19 +156,48 @@ public class UserViewModel: ObservableObject {
                     print(error.description)
                 }
             }, receiveValue: { [weak self] users in
+                guard let self = self else { return }
+                
                 if query.isEmpty {
-//                    self?.favoriteUserList.send(users)
+                    self.favoriteUserList = users
                 } else {
-//                    let filteredUserList = users.filter { $0.repository.owner.login.contains(query.lowercased()) }
-//                    self?.favoriteUserList.send(filteredUserList)
+                    let filteredUserList = users.filter { $0.repository.owner.login.contains(query.lowercased()) }
+                    self.favoriteUserList = filteredUserList
                 }
-//                self?.allFavoriteUserList.send(users)
+                
+                self.allFavoriteUserList = users
+                self.checkFavoriteStatus(query: query)
             })
             .store(in: &cancellable)
+    }
+    
+    // MARK: Check Picker Tab Button Type
+    private func checkFavoriteStatus(query: String) {
+        switch pickerTabButtonType {
+        case .all:
+            let user = userList.map { user, isFavorite -> UserRepositoryModel in
+                return user
+            }
+            let result = usecase.checkFavoriteStatus(userList: user, favortieUserList: favoriteUserList)
+            
+            userList = result
         
+        case .favorite:
+            let dict = usecase.convertListToDict(favoriteUserList: allFavoriteUserList)
+            let keys = dict.keys.sorted()
+            keys.forEach { key in
+                headers.append(key)
+                guard let result = dict[key] else { return }
+                userList = result.map { user -> (user: UserRepositoryModel, isFavorite: Bool) in
+                    (user, true)
+                }
+            }
+        }
     }
 }
 
+// MARK: Picker Enum
 public enum PickerButtonType: String {
-    case all, favorite
+    case all = "All"
+    case favorite = "Favorite"
 }

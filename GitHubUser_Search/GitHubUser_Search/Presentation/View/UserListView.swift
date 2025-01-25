@@ -14,7 +14,6 @@ import SDWebImageSwiftUI
 struct UserListView: View {
     let pickerButtonType: [PickerButtonType] = [.all, .favorite]
     @State private var cancellable = Set<AnyCancellable>()
-    @State private var pickerSelecter: String = "all"
     @StateObject private var viewModel: UserViewModel
 
     init(viewModel: UserViewModel) {
@@ -51,9 +50,9 @@ extension UserListView {
 extension UserListView {
     var pickerView: some View {
         VStack {
-            Picker("tab button type", selection: $pickerSelecter) {
+            Picker("tab button type", selection: $viewModel.pickerSelecter) {
                 ForEach(pickerButtonType, id: \.rawValue) { buttonType in
-                    Text(buttonType.rawValue.capitalized)
+                    Text(buttonType.rawValue)
                 }
             }
             .colorMultiply(.blue)
@@ -62,49 +61,75 @@ extension UserListView {
     }
 }
 
+// MARK: User ForEach View
 extension UserListView {
     var userView: some View {
         ScrollView {
             LazyVStack {
-                ForEach(viewModel.userList, id: \.repository.owner.id) { user in
-                    HStack {
-                        if let url = URL(string: user.repository.owner.imageURL) {
-                            WebImage(url: url)
-                                .resizable()
-                                .frame(width: 120, height: 120)
-                                .clipShape(.rect(cornerRadius: 8))
-                        } else {
-                            Image(systemName: "person.circle")
-                                .frame(width: 120, height: 120)
-                                .clipShape(.rect(cornerRadius: 8))
-                        }
-                        Spacer()
-
-                        Text(user.repository.owner.login)
-                            .font(.title3)
-                        
-                        Spacer()
-                        Button {
-                            viewModel.saveFavoriteUser(user: user)
-                        } label: {
-                            Image(systemName: "heart")
-                                .font(.headline)
-                                .foregroundStyle(.red)
-                        }
+                if viewModel.headers.isEmpty {
+                    userBodyList
+                } else {
+                    ForEach(viewModel.headers, id: \.self) { header in
+                        userHeadList(header)
+                        userBodyList
                     }
-                    .onAppear {
-                        guard let lastUser = viewModel.userList.last else { return }
-//                        let targetIndex = lastIndex - 3
-                        // targetIndex가 유효한지 확인
-//                        guard targetIndex >= 0, viewModel.userList.indices.contains(targetIndex) else { return }
-                        if user == lastUser {
-                            viewModel.paging += 1
-                            print("paging += 1")
-                        }
-                    }
-                    .padding()
                 }
             }
+        }
+    }
+    
+    func userHeadList(_ header: String) -> some View {
+        HStack {
+            Text(header)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .font(.title2)
+                .foregroundStyle(.white)
+                .background(Color.gray)
+                .clipShape(.rect(cornerRadius: 4))
+            Spacer()
+        }
+    }
+    
+    var userBodyList: some View {
+        ForEach(viewModel.userList, id: \.user.repository.owner.id) { user, isFavorite in
+            HStack {
+                if let url = URL(string: user.repository.owner.imageURL) {
+                    WebImage(url: url)
+                        .resizable()
+                        .frame(width: 120, height: 120)
+                        .clipShape(.rect(cornerRadius: 8))
+                } else {
+                    Image(systemName: "person.circle")
+                        .frame(width: 120, height: 120)
+                        .clipShape(.rect(cornerRadius: 8))
+                }
+                Spacer()
+
+                Text(user.repository.owner.login)
+                    .font(.title3)
+                
+                Text(isFavorite.description)
+                
+                Spacer()
+                Button {
+                    isFavorite
+                    ? viewModel.deleteFavoriteUser(id: user.repository.owner.id)
+                    : viewModel.saveFavoriteUser(user: user)
+                } label: {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .font(.headline)
+                        .foregroundStyle(.red)
+                }
+            }
+            .onAppear {
+                guard let lastUser = viewModel.userList.last else { return }
+                if user == lastUser.user {
+                    viewModel.paging += 1
+                    print("paging += 1")
+                }
+            }
+            .padding()
         }
     }
 }
