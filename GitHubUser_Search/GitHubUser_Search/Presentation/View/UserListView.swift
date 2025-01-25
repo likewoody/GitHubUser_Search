@@ -8,105 +8,144 @@
 import SwiftUI
 import CoreData
 import Combine
+import SDWebImageSwiftUI
 
+// MARK: View
 struct UserListView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \FavoriteUser.login, ascending: true)],
-        animation: .default)
-    private var coreDataFavoriteUser: FetchedResults<FavoriteUser>
-    @State private var userList: [UserRepositroyModel] = []
+    let pickerButtonType: [PickerButtonType] = [.all, .favorite]
     @State private var cancellable = Set<AnyCancellable>()
+    @StateObject private var viewModel: UserViewModel
+
+    init(viewModel: UserViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
-        NavigationView {
-            List {
-                Text("test")
-//                ForEach(userList, id: \.repository.owner.id) { user in
-//                    user.repository.owner.id
-//                }
-            }
-//            List {
-//                ForEach(coreDataFavoriteUser) { user in
-//                    NavigationLink {
-//                        Text("Item at \(user.id)")
-//                    } label: {
-//                        Text(user.login!)
-//                    }
-//                }
-//                .onDelete(perform: deleteItems)
-//            }
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    EditButton()
-//                }
-//                ToolbarItem {
-//                    Button(action: addItem) {
-//                        Label("Add Item", systemImage: "plus")
-//                    }
-//                }
-//            }
+        VStack {
+            userTextField
             
+            pickerView
+            Spacer()
+            
+            userView
+            Spacer()
         }
-        .onAppear {
-            let session = UserSession()
-            let networkManager = UserNetworkManager(session: session)
-            
-            let urlString = "https://api.github.com/search/code?q=\("")&page=1"
-            Task {
-                let publisherTest: AnyPublisher<UserItemsModel, NetworkError> = await networkManager.fetchUser(urlString: urlString, method: .get, parameters: nil)
-                
-                
-                publisherTest
-                    .receive(on: DispatchQueue.main)
-                    .sink { completion in
-                        switch completion {
-                        case .finished : break
-                        case .failure(let error):
-                            print("test error \(error)")
-                        }
-                    } receiveValue: { datas in
-                        userList = datas.items
+    }
+}
+
+// MARK: TextField
+extension UserListView {
+    var userTextField: some View {
+        VStack {
+            TextField("\(Image(systemName: "magnifyingglass")) 검색어를 입력하세요.", text: $viewModel.searchText)
+                .frame(maxWidth: .infinity)
+                .textFieldStyle(.roundedBorder)
+                .padding()
+                .font(.headline)
+        }
+    }
+}
+
+// MARK: Picker
+extension UserListView {
+    var pickerView: some View {
+        VStack {
+            Picker("tab button type", selection: $viewModel.pickerSelecter) {
+                ForEach(pickerButtonType, id: \.rawValue) { buttonType in
+                    Text(buttonType.rawValue)
+                }
+            }
+            .colorMultiply(.blue)
+            .pickerStyle(.segmented)
+        }
+    }
+}
+
+// MARK: User ForEach View
+extension UserListView {
+    var userView: some View {
+        ScrollView {
+            LazyVStack {
+                if viewModel.headers.isEmpty {
+                    userBodyList
+                } else {
+                    ForEach(viewModel.headers, id: \.self) { header in
+                        userHeadList(header)
+                        userBodyList
                     }
-                    .store(in: &cancellable)
-                
-                print(userList)
+                }
             }
         }
     }
+    
+    func userHeadList(_ header: String) -> some View {
+        HStack {
+            Text(header)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .font(.title2)
+                .foregroundStyle(.white)
+                .background(Color.gray)
+                .clipShape(.rect(cornerRadius: 4))
+            Spacer()
+        }
+    }
+    
+    var userBodyList: some View {
+        ForEach(viewModel.userList, id: \.user.repository.owner.id) { user, isFavorite in
+            HStack {
+                if let url = URL(string: user.repository.owner.imageURL) {
+                    WebImage(url: url)
+                        .resizable()
+                        .frame(width: 120, height: 120)
+                        .clipShape(.rect(cornerRadius: 8))
+                } else {
+                    Image(systemName: "person.circle")
+                        .frame(width: 120, height: 120)
+                        .clipShape(.rect(cornerRadius: 8))
+                }
+                Spacer()
 
-//    private func addItem() {
-//        withAnimation {
-//            let newItem = FavoriteUser(context: viewContext)
-//
-//            do {
-//                try viewContext.save()
-//            } catch {
-//                // Replace this implementation with code to handle the error appropriately.
-//                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-//                let nsError = error as NSError
-//                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-//            }
-//        }
-//    }
-//
-//    private func deleteItems(offsets: IndexSet) {
-//        withAnimation {
-////            offsets.map { items[$0] }.forEach(viewContext.delete)
-//
-//            do {
-//                try viewContext.save()
-//            } catch {
-//                // Replace this implementation with code to handle the error appropriately.
-//                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-//                let nsError = error as NSError
-//                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-//            }
-//        }
-//    }
+                Text(user.repository.owner.login)
+                    .font(.title3)
+                
+                Text(isFavorite.description)
+                
+                Spacer()
+                Button {
+                    isFavorite
+                    ? viewModel.deleteFavoriteUser(id: user.repository.owner.id)
+                    : viewModel.saveFavoriteUser(user: user)
+                } label: {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .font(.headline)
+                        .foregroundStyle(.red)
+                }
+            }
+            .onAppear {
+                guard let lastUser = viewModel.userList.last else { return }
+                if user == lastUser.user {
+                    viewModel.paging += 1
+                    print("paging += 1")
+                }
+            }
+            .padding()
+        }
+    }
 }
-
+    
+    
+// MARK: Preview
 #Preview {
-    UserListView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    let persistenceController = PersistenceController.shared
+    
+    let viewContext = persistenceController.container.viewContext
+    let userCoreData = UserCoreData(viewContext: viewContext)
+    let network = UserNetwork(networkMangaer: UserNetworkManager(session: UserSession()))
+    let userRepository = UserRepository(userCoreData: userCoreData, network: network)
+    let userUsecase = UserUsecase(userRepository: userRepository)
+    let userVM = UserViewModel(usecase: userUsecase)
+    
+    UserListView(viewModel: userVM)
+    //        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }

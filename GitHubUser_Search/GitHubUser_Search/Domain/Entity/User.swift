@@ -8,21 +8,21 @@
 import Foundation
 
 public struct UserItemsModel: Codable {
-    let items: [UserRepositroyModel]
+    let items: [UserRepositoryModel]
 }
 
-public struct UserRepositroyModel: Codable {
+public struct UserRepositoryModel: Codable, Hashable {
     let repository: UserOwnerModel
 }
 
-public struct UserOwnerModel: Codable {
+public struct UserOwnerModel: Codable, Hashable {
     let owner: UserModel
 }
 
-public struct UserModel: Codable {
+public struct UserModel: Codable, Hashable {
     let id: Int
     let login, imageURL: String
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case login
