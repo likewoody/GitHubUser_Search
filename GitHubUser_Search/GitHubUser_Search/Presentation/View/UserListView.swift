@@ -12,12 +12,14 @@ import SDWebImageSwiftUI
 
 // MARK: View
 struct UserListView: View {
-    let pickerButtonType: [PickerButtonType] = [.all, .favorite]
+    private let pickerButtonType: [PickerButtonType] = [.all, .favorite]
     @State private var cancellable = Set<AnyCancellable>()
     @StateObject private var viewModel: UserViewModel
 
     init(viewModel: UserViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
+        // 초기화 시 바인딩 설정
+//        viewModel.handleSearchText()
     }
 
     var body: some View {
@@ -35,7 +37,7 @@ struct UserListView: View {
 
 // MARK: TextField
 extension UserListView {
-    var userTextField: some View {
+    private var userTextField: some View {
         VStack {
             TextField("\(Image(systemName: "magnifyingglass")) 검색어를 입력하세요.", text: $viewModel.searchText)
                 .frame(maxWidth: .infinity)
@@ -48,13 +50,16 @@ extension UserListView {
 
 // MARK: Picker
 extension UserListView {
-    var pickerView: some View {
+    private var pickerView: some View {
         VStack {
             Picker("tab button type", selection: $viewModel.pickerSelecter) {
                 ForEach(pickerButtonType, id: \.rawValue) { buttonType in
                     Text(buttonType.rawValue)
                 }
             }
+//            .onChange(of: viewModel.pickerSelecter, { _, _ in
+//                viewModel.setupBindings()
+//            })
             .colorMultiply(.blue)
             .pickerStyle(.segmented)
         }
@@ -63,7 +68,7 @@ extension UserListView {
 
 // MARK: User ForEach View
 extension UserListView {
-    var userView: some View {
+    private var userView: some View {
         ScrollView {
             LazyVStack {
                 if viewModel.headers.isEmpty {
@@ -78,20 +83,7 @@ extension UserListView {
         }
     }
     
-    func userHeadList(_ header: String) -> some View {
-        HStack {
-            Text(header)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .font(.title2)
-                .foregroundStyle(.white)
-                .background(Color.gray)
-                .clipShape(.rect(cornerRadius: 4))
-            Spacer()
-        }
-    }
-    
-    var userBodyList: some View {
+    private var userBodyList: some View {
         ForEach(viewModel.userList, id: \.user.repository.owner.id) { user, isFavorite in
             HStack {
                 if let url = URL(string: user.repository.owner.imageURL) {
@@ -105,13 +97,12 @@ extension UserListView {
                         .clipShape(.rect(cornerRadius: 8))
                 }
                 Spacer()
-
+                
                 Text(user.repository.owner.login)
                     .font(.title3)
                 
-                Text(isFavorite.description)
-                
                 Spacer()
+                
                 Button {
                     isFavorite
                     ? viewModel.deleteFavoriteUser(id: user.repository.owner.id)
@@ -123,14 +114,27 @@ extension UserListView {
                 }
             }
             .onAppear {
+                // MARK: Paging at the end of userList
                 guard let lastUser = viewModel.userList.last else { return }
                 if user == lastUser.user {
                     viewModel.paging += 1
-                    print("paging += 1")
                 }
             }
             .padding()
         }
+    }
+    
+    private func userHeadList(_ header: String) -> some View {
+        HStack {
+            Text(header)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .font(.title3)
+                .bold()
+                .foregroundStyle(.gray)
+            Spacer()
+        }
+        .padding()
     }
 }
     
