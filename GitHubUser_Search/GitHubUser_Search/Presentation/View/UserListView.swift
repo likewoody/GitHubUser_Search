@@ -44,6 +44,9 @@ extension UserListView {
                 .textFieldStyle(.roundedBorder)
                 .padding()
                 .font(.headline)
+                .onSubmit(of: .text) {
+                    viewModel.handleSearchText()
+                }
         }
     }
 }
@@ -57,9 +60,9 @@ extension UserListView {
                     Text(buttonType.rawValue)
                 }
             }
-//            .onChange(of: viewModel.pickerSelecter, { _, _ in
-//                viewModel.setupBindings()
-//            })
+            .onChange(of: viewModel.pickerSelecter, { _, _ in
+                viewModel.getFavoriteUserList(query: viewModel.searchText)
+            })
             .colorMultiply(.blue)
             .pickerStyle(.segmented)
         }
@@ -72,55 +75,14 @@ extension UserListView {
         ScrollView {
             LazyVStack {
                 if viewModel.headers.isEmpty {
-                    userBodyList
+                    userBodyList("")
                 } else {
                     ForEach(viewModel.headers, id: \.self) { header in
                         userHeadList(header)
-                        userBodyList
+                        userBodyList(header)
                     }
                 }
             }
-        }
-    }
-    
-    private var userBodyList: some View {
-        ForEach(viewModel.userList, id: \.user.repository.owner.id) { user, isFavorite in
-            HStack {
-                if let url = URL(string: user.repository.owner.imageURL) {
-                    WebImage(url: url)
-                        .resizable()
-                        .frame(width: 120, height: 120)
-                        .clipShape(.rect(cornerRadius: 8))
-                } else {
-                    Image(systemName: "person.circle")
-                        .frame(width: 120, height: 120)
-                        .clipShape(.rect(cornerRadius: 8))
-                }
-                Spacer()
-                
-                Text(user.repository.owner.login)
-                    .font(.title3)
-                
-                Spacer()
-                
-                Button {
-                    isFavorite
-                    ? viewModel.deleteFavoriteUser(id: user.repository.owner.id)
-                    : viewModel.saveFavoriteUser(user: user)
-                } label: {
-                    Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.headline)
-                        .foregroundStyle(.red)
-                }
-            }
-            .onAppear {
-                // MARK: Paging at the end of userList
-                guard let lastUser = viewModel.userList.last else { return }
-                if user == lastUser.user {
-                    viewModel.paging += 1
-                }
-            }
-            .padding()
         }
     }
     
@@ -135,6 +97,49 @@ extension UserListView {
             Spacer()
         }
         .padding()
+    }
+    
+    private func userBodyList(_ header: String) -> some View {
+        ForEach(viewModel.userList, id: \.user.repository.owner.id) { user, isFavorite in
+            if header == user.repository.owner.login.first?.uppercased() {
+                HStack {
+                    if let url = URL(string: user.repository.owner.imageURL) {
+                        WebImage(url: url)
+                            .resizable()
+                            .frame(width: 120, height: 120)
+                            .clipShape(.rect(cornerRadius: 8))
+                    } else {
+                        Image(systemName: "person.circle")
+                            .frame(width: 120, height: 120)
+                            .clipShape(.rect(cornerRadius: 8))
+                    }
+                    Spacer()
+                    
+                    Text(user.repository.owner.login)
+                        .font(.title3)
+                    
+                    Spacer()
+                    
+                    Button {
+                        isFavorite
+                        ? viewModel.deleteFavoriteUser(id: user.repository.owner.id)
+                        : viewModel.saveFavoriteUser(user: user)
+                    } label: {
+                        Image(systemName: isFavorite ? "heart.fill" : "heart")
+                            .font(.headline)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .onAppear {
+                    // MARK: Paging at the end of userList
+                    guard let lastUser = viewModel.userList.last else { return }
+                    if user == lastUser.user {
+                        viewModel.queryPaging()
+                    }
+                }
+                .padding()
+            }
+        }
     }
 }
     
