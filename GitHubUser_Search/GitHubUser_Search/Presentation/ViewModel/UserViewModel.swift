@@ -13,77 +13,63 @@ public class UserViewModel: ObservableObject {
     private let usecase: UserUsecaseProtocol
     private var cancellable = Set<AnyCancellable>()
     private var allFavoriteUserList: [UserRepositoryModel] = []
-    private var favoriteUserList: [UserRepositoryModel] = []
-    private var pickerTabButtonType: PickerButtonType = .all
-    
+    private var paging: Int = 1
     @Published public var headers: [String] = []
     @Published public var userList: [(user: UserRepositoryModel, isFavorite: Bool)] = []
-    @Published public var pickerSelecter: String = "All" {
-        willSet {
-            if newValue == "All" {
-                pickerTabButtonType = .all
-            } else {
-                pickerTabButtonType = .favorite
-            }
-            getFavoriteUserList(query: searchText)
-        }
-    }
-    @Published public var paging: Int = 1 {
-        willSet {
-            queryPaging()
-        }
-    }
+    @Published public var favoriteUserList: [UserRepositoryModel] = []
+    @Published public var pickerSelecter: String = "All"
     @Published public var searchText: String = ""
-    {
-        willSet {
-            Task{
-                try await Task.sleep(nanoseconds: 30000)
-                handleSearchText()
-            }
-        }
-    }
     
     init(usecase: UserUsecaseProtocol) {
         self.usecase = usecase
     }
     
     // MARK: Function SearchText & Query
-    private func handleSearchText() {
+    public func handleSearchText() {
+        cancellable.removeAll() // 기존 구독 제거
         $searchText
             .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .receive(on: DispatchQueue.main)
             .removeDuplicates()
             .sink { [weak self] query in
-                guard let self = self,
-                      self.validQuery(query: query) else {
-                      self!.fetchUser(query: "", page: 1)
-                    return
-                }
-                self.fetchUser(query: query, page: 1)
-                
+                self?.handleSearchTextChange(query: query)
+                self?.getFavoriteUserList(query: query)
             }
             .store(in: &cancellable)
+        
+        print("test searchText : \(searchText)")
     }
     
-    private func queryPaging() {
-        $paging
-            .sink { [weak self] page in
-                guard let self = self else { return }
-                self.fetchUser(query: self.searchText, page: page)
-            }
-            .store(in: &cancellable)
+    private func handleSearchTextChange(query: String) {
+        // 검색 로직 처리
+        guard validQuery(query: query) else { return }
+        Task{
+            await fetchUser(query: query, page: 1)
+        }
     }
+    
+    public func queryPaging() {
+        paging += 1
+        Task {
+            await self.fetchUser(query: self.searchText, page: paging)
+        }
+    }
+    
     
     private func validQuery(query: String) -> Bool {
         // 유효성 검사도 할 수 있고 등등
+        DispatchQueue.main.async { [weak self] in
+            self?.userList = []
+            self?.favoriteUserList = []
+        }
         if query.isEmpty {
             return false
         } else {
-            userList = []
             return true
         }
     }
     
-    private func fetchUser(query: String, page: Int) {
+    private func fetchUser(query: String, page: Int) async {
         guard let queryAllowed = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return }
         Task{
             await usecase.fetchUserList(query: queryAllowed, page: page)
@@ -96,7 +82,6 @@ public class UserViewModel: ObservableObject {
                     }
                 } receiveValue: { [weak self] users in
                     if page == 1 {
-                        self?.userList = []
                         self?.userList = users.items.map { user in
                             (user: user, isFavorite: false)
                         }
@@ -115,6 +100,7 @@ public class UserViewModel: ObservableObject {
     public func saveFavoriteUser(user: UserRepositoryModel) {
         let result = usecase.saveFavoriteUser(user: user)
         result
+            .receive(on: DispatchQueue.main)
             .sink { completion in
                 switch completion {
                 case .finished: break
@@ -132,6 +118,7 @@ public class UserViewModel: ObservableObject {
     public func deleteFavoriteUser(id: Int) {
         let result = usecase.deleteFavoriteUser(id: id)
         result
+            .receive(on: DispatchQueue.main)
             .sink { completion in
                 switch completion {
                 case .finished: break
@@ -146,7 +133,7 @@ public class UserViewModel: ObservableObject {
             .store(in: &cancellable)
     }
     
-    private func getFavoriteUserList(query: String) {
+    public func getFavoriteUserList(query: String) {
         usecase.getFavoriteUserList()
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { completion in
@@ -157,42 +144,48 @@ public class UserViewModel: ObservableObject {
                 }
             }, receiveValue: { [weak self] users in
                 guard let self = self else { return }
-                
                 if query.isEmpty {
                     self.favoriteUserList = users
                 } else {
-                    let filteredUserList = users.filter { $0.repository.owner.login.contains(query.lowercased()) }
-                    self.favoriteUserList = filteredUserList
+                    let filteredUsers = users.filter { $0.repository.owner.login.contains(query.lowercased())}
+                    self.favoriteUserList = filteredUsers
                 }
-                
                 self.allFavoriteUserList = users
-                self.checkFavoriteStatus(query: query)
+                self.setUserListByPickerSegment()
+                
             })
             .store(in: &cancellable)
     }
     
     // MARK: Check Picker Tab Button Type
-    private func checkFavoriteStatus(query: String) {
-        switch pickerTabButtonType {
-        case .all:
-            let user = userList.map { user, isFavorite -> UserRepositoryModel in
-                return user
-            }
-            let result = usecase.checkFavoriteStatus(userList: user, favortieUserList: favoriteUserList)
-            
-            userList = result
-        
-        case .favorite:
-            let dict = usecase.convertListToDict(favoriteUserList: allFavoriteUserList)
-            let keys = dict.keys.sorted()
-            keys.forEach { key in
-                headers.append(key)
-                guard let result = dict[key] else { return }
-                userList = result.map { user -> (user: UserRepositoryModel, isFavorite: Bool) in
-                    (user, true)
+    private func setUserListByPickerSegment() {
+        headers = []
+        $pickerSelecter
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] picked in
+                guard let self = self else { return }
+                switch picked {
+                case "All":
+                    let user = userList.map { user, isFavorite -> UserRepositoryModel in
+                        return user
+                    }
+                    let result = usecase.checkFavoriteStatus(userList: user, favortieUserList: allFavoriteUserList)
+                    
+                    userList = result
+                case "Favorite":
+                    let dict = usecase.convertListToDict(favoriteUserList: favoriteUserList)
+                    let keys = dict.keys.sorted()
+                    keys.forEach { [weak self] key in
+                        guard let self = self,
+                            let result = dict[key] else { return }
+                        headers.append(key)
+                        favoriteUserList.append(contentsOf: result)
+                    }
+                    print("keys check : \(keys)")
+                default: break
                 }
             }
-        }
+            .store(in: &cancellable)
     }
 }
 
