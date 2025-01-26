@@ -23,14 +23,13 @@ struct UserListView: View {
     }
 
     var body: some View {
-        VStack {
+        Group {
             userTextField
             
             pickerView
             Spacer()
             
             userView
-            Spacer()
         }
     }
 }
@@ -73,73 +72,90 @@ extension UserListView {
 extension UserListView {
     private var userView: some View {
         ScrollView {
-            LazyVStack {
+            LazyVStack(spacing: 0) {
                 if viewModel.headers.isEmpty {
-                    userBodyList("")
+                    setUserBodyList("")
                 } else {
                     ForEach(viewModel.headers, id: \.self) { header in
-                        userHeadList(header)
-                        userBodyList(header)
+                        setFavoriteUserHeadList(header)
+                        setUserBodyList(header)
                     }
                 }
+                Spacer()
             }
         }
     }
     
-    private func userHeadList(_ header: String) -> some View {
-        HStack {
+    private func setFavoriteUserHeadList(_ header: String) -> some View {
+        VStack {
             Text(header)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
                 .font(.title3)
                 .bold()
                 .foregroundStyle(.gray)
-            Spacer()
         }
-        .padding()
     }
     
-    private func userBodyList(_ header: String) -> some View {
-        ForEach(viewModel.userList, id: \.user.repository.owner.id) { user, isFavorite in
-            if header == user.repository.owner.login.first?.uppercased() {
-                HStack {
-                    if let url = URL(string: user.repository.owner.imageURL) {
-                        WebImage(url: url)
-                            .resizable()
-                            .frame(width: 120, height: 120)
-                            .clipShape(.rect(cornerRadius: 8))
-                    } else {
-                        Image(systemName: "person.circle")
-                            .frame(width: 120, height: 120)
-                            .clipShape(.rect(cornerRadius: 8))
-                    }
-                    Spacer()
-                    
-                    Text(user.repository.owner.login)
-                        .font(.title3)
-                    
-                    Spacer()
-                    
-                    Button {
-                        isFavorite
-                        ? viewModel.deleteFavoriteUser(id: user.repository.owner.id)
-                        : viewModel.saveFavoriteUser(user: user)
-                    } label: {
-                        Image(systemName: isFavorite ? "heart.fill" : "heart")
-                            .font(.headline)
-                            .foregroundStyle(.red)
-                    }
+    private func setUserBodyList(_ header: String) -> some View {
+        Group {
+            if viewModel.pickerSelecter == "All" {
+                ForEach(viewModel.userList, id: \.user.repository.owner.id) { user, isFavorite in
+                    setUserCell(user: user, isFavorite: isFavorite)
                 }
-                .onAppear {
-                    // MARK: Paging at the end of userList
-                    guard let lastUser = viewModel.userList.last else { return }
-                    if user == lastUser.user {
-                        viewModel.queryPaging()
-                    }
+            } else {
+                ForEach(viewModel.favoriteUserList, id: \.repository.owner.id) { user in
+                    existedHeader(header: header, user: user)
                 }
-                .padding()
             }
         }
+    }
+    
+    private func existedHeader(header: String, user: UserRepositoryModel) -> some View {
+        Group {
+            if header == user.repository.owner.login.first?.uppercased() {
+                setUserCell(user: user, isFavorite: true)
+            }
+        }
+    }
+    
+    private func setUserCell(user: UserRepositoryModel, isFavorite: Bool) -> some View {
+        HStack {
+            if let url = URL(string: user.repository.owner.imageURL) {
+                WebImage(url: url)
+                    .resizable()
+                    .frame(width: 120, height: 120)
+                    .clipShape(.rect(cornerRadius: 8))
+            } else {
+                Image(systemName: "person.circle")
+                    .frame(width: 120, height: 120)
+                    .clipShape(.rect(cornerRadius: 8))
+            }
+            Spacer()
+            
+            Text(user.repository.owner.login)
+                .font(.title3)
+            
+            Spacer()
+            
+            Button {
+                isFavorite
+                ? viewModel.deleteFavoriteUser(id: user.repository.owner.id)
+                : viewModel.saveFavoriteUser(user: user)
+            } label: {
+                Image(systemName: isFavorite ? "heart.fill" : "heart")
+                    .font(.headline)
+                    .foregroundStyle(.red)
+            }
+        }
+        .onAppear {
+            // MARK: Paging at the end of userList
+            guard let lastUser = viewModel.userList.last else { return }
+            if user == lastUser.user {
+                viewModel.queryPaging()
+            }
+        }
+        .padding()
     }
 }
     
